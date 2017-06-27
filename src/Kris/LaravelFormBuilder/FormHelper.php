@@ -7,9 +7,10 @@ use Illuminate\Contracts\View\Factory as View;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Translation\Translator;
 use Kris\LaravelFormBuilder\Fields\FormField;
 use Kris\LaravelFormBuilder\Form;
-use Illuminate\Translation\Translator;
+use Kris\LaravelFormBuilder\RulesParser;
 
 class FormHelper
 {
@@ -144,7 +145,7 @@ class FormHelper
             throw new \InvalidArgumentException('Field type must be provided.');
         }
 
-        if (array_key_exists($type, $this->customTypes)) {
+        if ($this->hasCustomField($type)) {
             return $this->customTypes[$type];
         }
 
@@ -195,7 +196,7 @@ class FormHelper
      */
     public function addCustomField($name, $class)
     {
-        if (!array_key_exists($name, $this->customTypes)) {
+        if (!$this->hasCustomField($name)) {
             return $this->customTypes[$name] = $class;
         }
 
@@ -214,6 +215,16 @@ class FormHelper
                 $this->addCustomField($fieldName, $fieldClass);
             }
         }
+    }
+
+    /**
+     * Check if custom field with provided name exists
+     * @param string $name
+     * @return boolean
+     */
+    public function hasCustomField($name)
+    {
+        return array_key_exists($name, $this->customTypes);
     }
 
     /**
@@ -258,6 +269,15 @@ class FormHelper
         }
 
         return ucfirst(str_replace('_', ' ', $name));
+    }
+
+    /**
+     * @param FormField $field
+     * @return RulesParser
+     */
+    public function createRulesParser(FormField $field)
+    {
+        return new RulesParser($field);
     }
 
     /**

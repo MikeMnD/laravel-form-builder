@@ -691,6 +691,10 @@ class Form
      */
     public function addCustomField($name, $class)
     {
+        if ($this->rebuilding && $this->formHelper->hasCustomField($name)) {
+            return $this;
+        }
+
         $this->formHelper->addCustomField($name, $class);
     }
 

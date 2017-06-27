@@ -25,6 +25,7 @@ class FormBuilder
     protected $eventDispatcher;
 
     /**
+     * @param Container $container
      * @var string
      */
     protected $plainFormClass = Form::class;
@@ -59,15 +60,7 @@ class FormBuilder
             );
         }
 
-        $form = $this->container
-            ->make($class)
-            ->addData($data)
-            ->setRequest($this->container->make('request'))
-            ->setFormHelper($this->formHelper)
-            ->setEventDispatcher($this->eventDispatcher)
-            ->setFormBuilder($this)
-            ->setValidator($this->container->make('validator'))
-            ->setFormOptions($options);
+        $form = $this->setDependenciesAndOptions($this->container->make($class), $options, $data);
 
         $form->buildForm();
 
@@ -77,7 +70,50 @@ class FormBuilder
     }
 
     /**
-     * Get the namespace from the config.
+     * @param $items
+     * @param array $options
+     * @param array $data
+     * @return mixed
+     */
+    public function createByArray($items, array $options = [], array $data = [])
+    {
+        $form = $this->setDependenciesAndOptions(
+            $this->container->make($this->plainFormClass),
+            $options,
+            $data
+        );
+
+        $this->buildFormByArray($form, $items);
+
+        $this->eventDispatcher->fire(new AfterFormCreation($form));
+
+        return $form;
+    }
+
+    /**
+     * @param $form
+     * @param $items
+     */
+    public function buildFormByArray($form, $items)
+    {
+        foreach ($items as $item) {
+            if (!isset($item['name'])) {
+                throw new \InvalidArgumentException(
+                    'Name is not set in form array.'
+                );
+            }
+            $name = $item['name'];
+            $type = isset($item['type']) && $item['type'] ? $item['type'] : '';
+            $modify = isset($item['modify']) && $item['modify'] ? $item['modify'] : false;
+            unset($item['name']);
+            unset($item['type']);
+            unset($item['modify']);
+            $form->add($name, $type, $item, $modify);
+        }
+    }
+
+    /**
+     * Get the namespace from the config
      *
      * @return string
      */
@@ -93,6 +129,7 @@ class FormBuilder
     }
 
     /**
+     * Get instance of the empty form which can be modified
      * Get the plain form class.
      *
      * @return string
@@ -124,8 +161,28 @@ class FormBuilder
      */
     public function plain(array $options = [], array $data = [])
     {
-        $form = $this->container
-            ->make($this->plainFormClass)
+        $form = $this->setDependenciesAndOptions(
+            $this->container->make($this->plainFormClass),
+            $options,
+            $data
+        );
+
+        $this->eventDispatcher->fire(new AfterFormCreation($form));
+
+        return $form;
+    }
+
+    /**
+     * Set depedencies and options on existing form instance
+     *
+     * @param \Kris\LaravelFormBuilder\Form $instance
+     * @param array $options
+     * @param array $data
+     * @return \Kris\LaravelFormBuilder\Form
+     */
+    public function setDependenciesAndOptions($instance, array $options = [], array $data = [])
+    {
+        return $instance
             ->addData($data)
             ->setRequest($this->container->make('request'))
             ->setFormHelper($this->formHelper)
@@ -133,9 +190,5 @@ class FormBuilder
             ->setFormBuilder($this)
             ->setValidator($this->container->make('validator'))
             ->setFormOptions($options);
-
-        $this->eventDispatcher->fire(new AfterFormCreation($form));
-
-        return $form;
     }
 }
